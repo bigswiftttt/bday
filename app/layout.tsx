@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bodoni_Moda, Inter } from "next/font/google";
+import { Bodoni_Moda, Inter, Great_Vibes } from "next/font/google";
 import "./globals.css";
 
 const bodoni = Bodoni_Moda({
@@ -12,6 +12,13 @@ const bodoni = Bodoni_Moda({
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+const greatVibes = Great_Vibes({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-greatvibes",
   display: "swap",
 });
 
@@ -30,7 +37,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${bodoni.variable} ${inter.variable}`}>
+    <html
+      lang="en"
+      className={`${bodoni.variable} ${inter.variable} ${greatVibes.variable}`}
+    >
       <body>{children}</body>
     </html>
   );
