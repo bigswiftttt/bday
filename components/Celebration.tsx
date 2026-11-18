@@ -9,7 +9,8 @@ import { palette } from "../lib/palette";
 gsap.registerPlugin(ScrollTrigger);
 
 // ---- Edit these ----
-const WORDS = ["MOM", "SIBLING", "CONFIDENT", "HELPER"];
+const WORDS = ["MOM", "SIBLING", "Confidante", "HELPER"];
+const STEP_SCROLL = 80; // % of screen height scrolled per word (lower = faster)
 const WISH_BEFORE = "Make a wish.";
 const WISH_AFTER = "Wish made.";
 // --------------------
@@ -45,40 +46,94 @@ export default function Celebration() {
             gsap.set(q(".smoke"), { strokeDasharray: 1, strokeDashoffset: 1, opacity: 0 });
             gsap.set(q(".wish-after"), { opacity: 0 });
 
-            // ---- The "Super" reveal (pinned, scroll-scrubbed) ----
+            // ---- The "Super" reveal ----
             if (reduce) {
-                gsap.set(q(".words, .super-label"), { display: "none" });
+                gsap.set(q(".words, .super-label, .dots"), { display: "none" });
                 gsap.set(q(".static-line"), { display: "block" });
                 gsap.set(q(".finale"), { position: "relative" });
             } else {
-                gsap.set(q(".word-l, .finale-l"), { yPercent: 115 });
+                const statement = q(".statement")[0];
+                const steps = WORDS.length + 1; // words + finale
+
+                gsap.set(q(".word-l, .finale-l"), { yPercent: 115, opacity: 0 });
                 gsap.set(q(".super-label, .finale-sub"), { opacity: 0 });
 
-                const tl = gsap.timeline({
-                    scrollTrigger: {
-                        trigger: q(".statement")[0],
-                        start: "top top",
-                        end: "+=360%",
-                        pin: true,
-                        scrub: 0.6,
-                        anticipatePin: 1,
-                        invalidateOnRefresh: true,
-                    },
-                });
+                // A paused timeline. Label "s<i>" = step i fully shown.
+                const tl = gsap.timeline({ paused: true });
+                const tLabel = (i: number) => 1.5 + i * 2;
 
-                tl.to(q(".super-label"), { opacity: 1, duration: 0.6 }, 0);
-                q(".word").forEach((w, i) => {
+                tl.to(q(".super-label"), { opacity: 1, duration: 0.8, ease: "power2.out" }, 0.2);
+
+                (q(".word") as HTMLElement[]).forEach((w, i) => {
+                    const t = tLabel(i);
                     const letters = w.querySelectorAll(".word-l");
-                    const t = i * 3;
-                    tl.to(letters, { yPercent: 0, duration: 1, stagger: 0.05, ease: "power3.out" }, t);
-                    tl.to(letters, { yPercent: -115, duration: 0.8, stagger: 0.03, ease: "power3.in" }, t + 2);
+                    tl.addLabel(`s${i}`, t);
+                    tl.fromTo(
+                        w,
+                        { scale: 0.96 },
+                        { scale: 1, duration: 1.3, ease: "power2.out" },
+                        t - 1.3
+                    );
+                    tl.to(
+                        letters,
+                        { yPercent: 0, opacity: 1, duration: 0.9, stagger: 0.045, ease: "power3.out" },
+                        t - 1.3
+                    );
+                    tl.to(
+                        letters,
+                        { yPercent: -115, opacity: 0, duration: 0.7, stagger: 0.03, ease: "power3.in" },
+                        t + 0.3
+                    );
                 });
 
-                const tF = WORDS.length * 3;
-                tl.to(q(".super-label"), { opacity: 0, duration: 0.5 }, tF - 0.5);
-                tl.to(q(".finale-sub"), { opacity: 1, duration: 0.8 }, tF);
-                tl.to(q(".finale-l"), { yPercent: 0, duration: 1.1, stagger: 0.07, ease: "power3.out" }, tF);
-                tl.to({}, { duration: 1.6 });
+                const tF = tLabel(WORDS.length);
+                tl.addLabel(`s${WORDS.length}`, tF);
+                tl.to(q(".super-label"), { opacity: 0, duration: 0.6 }, tLabel(WORDS.length - 1) + 0.3);
+                tl.to(q(".finale-sub"), { opacity: 1, duration: 0.8 }, tF - 0.9);
+                tl.to(
+                    q(".finale-l"),
+                    { yPercent: 0, opacity: 1, duration: 1, stagger: 0.07, ease: "power3.out" },
+                    tF - 1.5
+                );
+
+                // Scroll chooses the step; time plays the animation.
+                const dots = q(".dot");
+                let current = -1;
+                let tw: gsap.core.Tween | undefined;
+
+                const goto = (i: number) => {
+                    if (i === current) return;
+                    const from = current;
+                    current = i;
+                    tw?.kill();
+                    const dur = Math.min(2.4, 0.9 + 0.4 * Math.abs(i - from));
+                    tw = tl.tweenTo(i < 0 ? 0 : `s${i}`, { duration: dur, ease: "power2.inOut" });
+                    gsap.to(dots, {
+                        opacity: (j: number) => (j === i ? 1 : 0.25),
+                        duration: 0.4,
+                        overwrite: true,
+                    });
+                };
+
+                // Starts the first word before the section locks in place.
+                ScrollTrigger.create({
+                    trigger: statement,
+                    start: "top 45%",
+                    end: "top top",
+                    onEnter: () => goto(Math.max(current, 0)),
+                    onLeaveBack: () => goto(-1),
+                });
+
+                // Pins the section and maps scroll position to a step.
+                ScrollTrigger.create({
+                    trigger: statement,
+                    start: "top top",
+                    end: `+=${steps * STEP_SCROLL}%`,
+                    pin: true,
+                    anticipatePin: 1,
+                    invalidateOnRefresh: true,
+                    onUpdate: (self) => goto(Math.min(steps - 1, Math.floor(self.progress * steps))),
+                });
             }
 
             // ---- The wish ----
@@ -183,7 +238,7 @@ export default function Celebration() {
             <section className="statement relative flex h-svh flex-col items-center justify-center overflow-hidden px-4 text-center">
                 <div className="vignette pointer-events-none absolute inset-0" aria-hidden="true" />
                 <h2 className="sr-only">
-                    Supermom. Super Sibling. Super Confident. Super Helper. Happy birthday, Egbon mi.
+                    Supermom. Super Sibling. Super Confidante. Super Helper. Happy birthday, Egbon mi.
                 </h2>
 
                 <p
@@ -220,8 +275,17 @@ export default function Celebration() {
                 </div>
 
                 <p className="static-line mb-10 hidden max-w-[22ch] font-display text-[clamp(1.6rem,6vw,3rem)] italic leading-tight text-ivory">
-                    Supermom. Super Sibling. Super Confident. Super Helper.
+                    Supermom. Super Sibling. Super Confidante. Super Helper.
                 </p>
+
+                <div
+                    aria-hidden="true"
+                    className="dots absolute bottom-[calc(2rem+env(safe-area-inset-bottom))] flex gap-2"
+                >
+                    {Array.from({ length: WORDS.length + 1 }).map((_, i) => (
+                        <span key={i} className="dot h-1 w-1 rounded-full bg-accent opacity-25" />
+                    ))}
+                </div>
             </section>
 
             {/* The wish */}

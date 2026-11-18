@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Opening from "./Opening";
 import Celebration from "./Celebration";
+import MemoryLane from "./MemoryLane";
 import Letter from "./Letter";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -70,6 +71,7 @@ export default function Experience() {
             </div>
             <div ref={rest} className="relative z-10 bg-ink">
                 <Celebration />
+                <MemoryLane />
                 <Letter />
             </div>
         </>
