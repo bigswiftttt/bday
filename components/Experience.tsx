@@ -7,6 +7,7 @@ import Opening from "./Opening";
 import Celebration from "./Celebration";
 import MemoryLane from "./MemoryLane";
 import Letter from "./Letter";
+import Finale from "./Finale";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -73,6 +74,7 @@ export default function Experience() {
                 <Celebration />
                 <MemoryLane />
                 <Letter />
+                <Finale />
             </div>
         </>
     );
